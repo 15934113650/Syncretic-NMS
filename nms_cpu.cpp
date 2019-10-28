@@ -2,7 +2,7 @@
 #include "cpu/vision.h"
 #include <cmath>
 #include <vector>
-#include <stdio.h>      //测试用，用完删除
+#include <stdio.h>
 
 using std::vector;
 
@@ -108,22 +108,6 @@ at::Tensor nms_cpu_kernel(at::Tensor& dets,             //boxes: [N, (x1, y1, x2
 
   return at::nonzero(suppressed_t == 0).squeeze(1);
 }
-
-//1. 新建数组major[]保存所有suppressed为0的dets
-//2. 新建数组order_t2[]，保留suppressed为1的dets
-//3. 新建二维数组attach[][]，保留通过关联测验的附属框      //动态分配内存new，通过指针
-//4. for(每个major[_i]的元素){
-//      for(每个order_t2[_j]){
-//          if(IoU(major[_i] && order[_j]) >= threshold_3)    //threshold_3待实验研究
-//              if(IoU(major[_i] && order[_j]) * order[_j] >= threshold_4)      //是否使用乘法(主要看得分的连续性)，以及threshold_4待实验
-//                  attach[_i][_j] = order_t2[_j];}
-//   }
-//5. for(每个major[_i]的元素){
-//      for(每个attach[_i][_j]){
-//          计算major[_i]与所有attach[_i][]的四点坐标(xx1,yy1,xx2,yy2);
-//          更新major[_i]的四点坐标为(xx1,yy1,xx2,yy2);}
-//   }
-//6. 返回major[]数组
 
 at::Tensor nms_cpu(at::Tensor& dets,
                const at::Tensor& scores,
