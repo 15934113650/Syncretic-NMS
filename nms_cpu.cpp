@@ -2,7 +2,6 @@
 #include "cpu/vision.h"
 #include <cmath>
 #include <vector>
-#include <stdio.h>
 
 using std::vector;
 
@@ -16,7 +15,7 @@ at::Tensor nms_cpu_kernel(at::Tensor& dets,             //boxes: [N, (x1, y1, x2
 
   vector<int64_t> attach;
 
-  //const auto threshold_2 = 0.5;     //控制attach框与major框的关联紧密程度，此阈值越高则attach框越少
+  const auto threshold_2 = 0.6;     //控制attach框与major框的关联紧密程度，此阈值越高则attach框越少
 
   if (dets.numel() == 0) {
     return at::empty({0}, dets.options().dtype(at::kLong).device(at::kCPU));
@@ -66,7 +65,7 @@ at::Tensor nms_cpu_kernel(at::Tensor& dets,             //boxes: [N, (x1, y1, x2
       auto inter = w * h;
       auto ovr = inter / (iarea + areas[j] - inter);
       if (ovr >= threshold){
-        if(ovr * j >= 0.5){     //关联判断阈值，越接近1，attach框越少
+        if(ovr * j >= threshold_2){     //关联判断阈值，越接近1，attach框越少
           attach.push_back(j);  //通过则加入attach
         }
         suppressed[j] = 1;
@@ -75,6 +74,7 @@ at::Tensor nms_cpu_kernel(at::Tensor& dets,             //boxes: [N, (x1, y1, x2
     attach.push_back(i);    //attach的最后加入主框，待会记得释放attach
 
     auto min_x1 = x1[attach[0]], max_y1 = y1[attach[0]], max_x2 = x2[attach[0]], min_y2 = y2[attach[0]];    //初始化四点为第一个框的坐标
+    printf("min_x1:%g\tmax_y1:%g\tmax_x2:%g\tmin_y2:%g\n",min_x1,max_y1,max_x2,min_y2);
 
     for(int64_t _m = 1; _m <= attach.size(); _m++){
         auto m = attach[_m];
@@ -88,18 +88,10 @@ at::Tensor nms_cpu_kernel(at::Tensor& dets,             //boxes: [N, (x1, y1, x2
         if(iy2 < min_y2) min_y2 = iy2;  //找最小y2
     }
 
-    printf("min_x1:%g\tmax_y1:%g\tmax_x2:%g\tmin_y2:%g\n",min_x1,max_y1,max_x2,min_y2);
-//    dets.select(1, 0).contiguous() = ix1;
-//    dets.select(1, 1).contiguous() = iy1;
-//    dets.select(1, 2).contiguous() = ix2;
-//    dets.select(1, 3).contiguous() = iy2;
-
-//    x1[i] = min_x1;
-//    y1[i] = max_y1;
-//    x2[i] = max_x2;
-//    y2[i] = min_y2;
-
-    //printf("%f\t%f\t%f\t%f\n",x1[i],y1[i],x2[i],y2[i]);   //此处已测试，无问题
+    x1[i] = min_x1;
+    y1[i] = max_y1;
+    x2[i] = max_x2;
+    y2[i] = min_y2;
     //更新det两点坐标
 
     attach.clear();     //释放attach临时空间，为下一个主框的扩张做准备; clear()函数清空vector
